@@ -1,60 +1,108 @@
-import SimpleLightbox from 'simplelightbox';
-import 'simplelightbox/dist/simple-lightbox.min.css';
+import { renderImages, initializeLightbox } from './js/render-functions.js';
+import { fetchIcon, limit } from './js/pixabay-api';
+import iziToast from 'izitoast';
+import 'izitoast/dist/css/iziToast.min.css';
 
-import { renderMarcup, showEndOfListMessage } from './js/render-functions';
-import { fetchImages } from './js/pixabay-api';
-
-const lightbox = new SimpleLightbox('.gallery a', {
-  nav: true,
-  captions: true,
-  captionsData: 'alt',
-  captionDelay: 150,
-});
-
-const form = document.querySelector('.search-form');
-const container = document.querySelector('.gallery');
-const loadMoreBtn = document.querySelector('.load-btn');
-let searchWord = '';
+const form = document.querySelector('.form');
+const gallery = document.querySelector('.gallery');
+const loader = document.querySelector('.loader');
+const button = document.querySelector('.load-more');
+let lightbox;
+let page = 1;
+let prevQuery = '';
+let currentPage = 1;
 
 form.addEventListener('submit', onSubmit);
-loadMoreBtn.addEventListener('click', onLoadMore);
+button.addEventListener('click', loadMore);
 
-function onSubmit(event) {
-  event.preventDefault();
-  container.innerHTML = '';
-  searchWord = form.elements.searchWord.value.trim();
-  fetchImages(searchWord)
-    .then(data => {
-      const marcup = renderMarcup(data);
-      container.insertAdjacentHTML('beforeend', marcup);
+function onSubmit(e) {
+  e.preventDefault();
+  const query = form.elements['search'].value;
 
-      lightbox.refresh();
-    })
-    .catch(error => {
-      console.error('Error:', error);
-    });
+  currentPage = page;
+  if (query !== prevQuery) {
+    page = 1;
+    prevQuery = query;
+  }
+
+  gallery.innerHTML = '';
+  loader.style.display = 'block';
+  button.style.display = 'none';
+
+  fetchImages(query, page);
+
   form.reset();
-  loadMoreBtn.style.display = 'block';
 }
 
-async function onLoadMore() {
-  currPage += 1;
+function loadMore() {
+  loader.style.display = 'block';
+  page += 1;
+
+  if (page === currentPage + 1) {
+    fetchImages(prevQuery, page);
+  } else {
+    console.log('Стoрінка була змінена перед завершенням попереднього запиту.');
+  }
+}
+
+async function fetchImages(query, page) {
   try {
-    const images = await fetchImages(searchWord, currPage);
-    renderMarcup(images);
-    lightbox.refresh();
+    const data = await fetchIcon(query, page);
 
-    const cardHeight = container.getBoundingClientRect().height;
-    window.scrollBy({
-      top: 4 * cardHeight,
-      behavior: 'smooth',
-    });
-
-    if (!images.hits || images.hits.length === 0) {
-      loadMoreBtn.style.display = 'none';
-      showEndOfListMessage();
+    if (!query.trim()) {
+      iziToast.error({
+        message: 'Заповніть це поле!',
+        messageColor: '#FFFFFF',
+        backgroundColor: '#B51B1B',
+        position: 'topRight',
+      });
+      loader.style.display = 'none';
+      return;
+    } else if (data.hits.length === 0) {
+      iziToast.error({
+        message:
+          'Sorry, there are no images matching your search query. Please try again!',
+        messageColor: '#FFFFFF',
+        backgroundColor: '#B51B1B',
+        position: 'center',
+      });
+      loader.style.display = 'none';
+      return;
+    } else {
+      const imagesHTML = renderImages(data);
+      gallery.insertAdjacentHTML('beforeend', imagesHTML);
+      loader.style.display = 'none';
+      if (!lightbox) {
+        lightbox = initializeLightbox();
+      } else {
+        lightbox.refresh();
+      }
+      scroll();
+      currentPage = page;
+      const totalImages = data.totalHits;
+      const totalPages = Math.ceil(totalImages / limit);
+      if (page >= totalPages) {
+        button.style.display = 'none';
+        return iziToast.error({
+          position: 'topRight',
+          message: "We're sorry, there are no more images to load",
+        });
+      } else {
+        button.style.display = 'block';
+      }
     }
   } catch (error) {
-    console.error('Error:', error);
+    loader.style.display = 'none';
+    iziToast.error({
+      message: 'Fetch error. Please try again later.',
+      messageColor: '#FFFFFF',
+      backgroundColor: '#B51B1B',
+      position: 'center',
+    });
   }
+}
+
+function scroll() {
+  const cardHeight = gallery.firstElementChild.getBoundingClientRect().height;
+  window.scrollBy({ top: 2 * cardHeight, behavior: 'smooth' });
 }

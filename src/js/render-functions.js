@@ -1,41 +1,52 @@
-import iziToast from 'izitoast';
-import 'izitoast/dist/css/iziToast.min.css';
+import SimpleLightbox from 'simplelightbox';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
-export function renderMarcup(data) {
-  return data.hits
+export function renderImages(result) {
+  return result.hits
     .map(
-      el =>
-        `<div class="gallery-item">
-            <a class="gallery-link" href="${el.largeImageURL}">
-                <img class="gallery-image" src="${el.webformatURL}" alt="${el.tags}" />
-            </a>
-            <div class="gallery-item-info">
-                <p class="gallery-item-info-par">
-                    <span class="gallery-item-info-span">Likes: <span>${el.likes}</span>
-                    </span>    
-                </p>
-                <p class="gallery-item-info-par">
-                    <span class="gallery-item-info-span">Views: <span>${el.views}</span>
-                    </span>    
-                </p>
-                <p class="gallery-item-info-par">
-                    <span class="gallery-item-info-span">Comments: <span>${el.comments}</span>
-                    </span>    
-                </p>
-                <p class="gallery-item-info-par">
-                    <span class="gallery-item-info-span">Downloads: <span>${el.downloads}</span>
-                    </span>    
-                </p>
-            </div>
-        </div>`
+      ({
+        webformatURL,
+        tags,
+        largeImageURL,
+        likes,
+        views,
+        comments,
+        downloads,
+      }) => {
+        return ` <li>
+        <a class="gallery-link" href="${largeImageURL}">
+        <img class="gallery-image" src="${webformatURL}" 
+        alt="${tags}"
+        data-source="${largeImageURL}">
+        <div class="image-info">
+                            <ul class="image-info-list">
+                                <li class="image-item">
+                                    <h2 class="image-text">Likes</h2>
+                                    <p class="image-quantity">${likes}</p>
+                                </li>
+                                <li class="image-item">
+                                    <h2 class="image-text">Views</h2>
+                                    <p class="image-quantity">${views}</p>
+                                </li>
+                                <li class="image-item">
+                                    <h2 class="image-text">Comments</h2>
+                                    <p class="image-quantity">${comments}</p>
+                                </li>
+                                <li class="image-item">
+                                    <h2 class="image-text">Downloads</h2>
+                                    <p class="image-quantity">${downloads}</p>
+                                </li>
+                            </ul>
+                        </div>
+      </li>`;
+      }
     )
     .join('');
 }
 
-export function showEndOfListMessage() {
-  iziToast.info({
-    timeout: 3000,
-    position: 'topRight',
-    message: "We're sorry, but you've reached the end of search results.",
+export function initializeLightbox() {
+  return new SimpleLightbox('.gallery-link', {
+    captionsData: 'alt',
+    captionDelay: 250,
   });
 }

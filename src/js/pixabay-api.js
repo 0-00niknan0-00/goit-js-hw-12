@@ -1,37 +1,19 @@
-import iziToast from 'izitoast';
-import 'izitoast/dist/css/iziToast.min.css';
 import axios from 'axios';
+export const limit = 15;
 
-const KEY = '41952140-5e618661129c37e138516e154';
-const URL = 'https://pixabay.com/api/';
-const loader = document.querySelector('.loader');
+export async function fetchIcon(query, page) {
+  const params = new URLSearchParams({
+    key: '42717208-a054428a9fe92ed44706731cd',
+    q: query,
+    per_page: limit,
+    page: page,
+  });
 
-export async function fetchImages(searchWord, currPage = 1) {
-  loader.style.display = 'block';
-  try {
-    const resp = await axios.get(URL, {
-      params: {
-        key: KEY,
-        q: searchWord,
-        image_type: 'photo',
-        orientation: 'horizontal',
-        safesearch: true,
-        page: currPage,
-        per_page: 15,
-      },
-    });
-    loader.style.display = 'none';
+  const BASE_URL = 'https://pixabay.com/api/';
+  const response = await axios.get(`${BASE_URL}?${params}`);
 
-    if (resp.data.hits.length === 0) {
-      iziToast.error({
-        timeout: 3000,
-        position: 'topRight',
-        message:
-          'There are no images matching your search query. Please, enter something else!',
-      });
-    }
-    return resp.data;
-  } catch (error) {
-    console.error('Error fetching data!', error);
-  }
+  return {
+    hits: response.data.hits,
+    totalHits: response.data.totalHits,
+  };
 }
